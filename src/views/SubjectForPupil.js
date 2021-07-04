@@ -12,7 +12,6 @@ import {
   FormControl,
   Table
 } from "react-bootstrap";
-import { getJSDocImplementsTags } from "typescript";
 
 
 function SubjectForPupil({subject, ...props}) {

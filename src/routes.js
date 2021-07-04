@@ -118,4 +118,4 @@ const authRoutes = [
   }
 ];
 
-export {adminRoutes, teacherRoutes, pupilRoutes, authRoutes};
+export {adminRoutes, teacherRoutes, pupilRoutes, authRoutes}
