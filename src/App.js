@@ -58,7 +58,7 @@ function App(props) {
         <Switch>
             <Route path="/login" render={(props) => !getToken() ? <AuthLayout {...props}/> : <Redirect to="/dashboard" />} />
             <Route path="/" render={(props) => getToken() ? <MainLayout {...props}/> : <Redirect to="/login" />} />
-        
+            <Redirect from="*" to="/dashboard" />
         </Switch>
     </BrowserRouter>
     );
