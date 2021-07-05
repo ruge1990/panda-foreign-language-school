@@ -29,7 +29,7 @@ import MainLayout from "layouts/Main.js";
 import AuthLayout from "layouts/Auth.js";
 import { getToken, setUserSession, removeUserSession } from "Utils/Common.js";
 
-function App(props) {
+function App() {
     const [authLoading, setAuthLoading] = useState(true);
 
     useEffect(() => {
