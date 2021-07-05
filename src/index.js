@@ -26,4 +26,4 @@ import "@fortawesome/fontawesome-free/css/all.min.css";
 
 import App from "./App.js";
 
-ReactDOM.render(<App />, document.getElementById('root'));
+ReactDOM.render(<App {...props}/>, document.getElementById('root'));
