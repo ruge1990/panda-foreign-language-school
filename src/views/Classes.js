@@ -68,6 +68,7 @@ function Classes(props) {
         if(response.data.error == true){
           console.log(response.data.message);
           setClassError("class name already exists, try another one");
+
         } else {
           setShowCreateClass(false);
           setClassSuccess("class created");
@@ -100,9 +101,29 @@ function Classes(props) {
             key={index}
             {...props}/>
           ))}
+          <Form onSubmit={handleCreateClass}>
+          {showCreateClass &&
+          <Row md="3">
+            <Col>
+            <Card>
+            <Card.Body>
+              <Form.Group>
+              <label>class name</label>
+              <Form.Control
+                placeholder="class name"
+                type="text"
+                name="classname"
+                onChange={e => setClassName(e.target.value)}
+              />
+              </Form.Group>
+            </Card.Body>
+            </Card>
+            </Col>
+          </Row>
+          }
           {classSuccess && <p style={{ color: 'green' }}>{classSuccess}</p>}
           {classError && <p style={{ color: 'red' }}>{classError}</p>}
-          <Form onSubmit={handleCreateClass}>
+
           <Row>
           <Col>
           <Button
@@ -133,25 +154,6 @@ function Classes(props) {
           }
           </Col>
           </Row>
-          {showCreateClass &&
-          <Row md="3">
-            <Col>
-            <Card>
-            <Card.Body>
-              <Form.Group>
-              <label>class name</label>
-              <Form.Control
-                placeholder="class name"
-                type="text"
-                name="classname"
-                onChange={e => setClassName(e.target.value)}
-              />
-              </Form.Group>
-            </Card.Body>
-            </Card>
-            </Col>
-          </Row>
-          }
 
           </Form>
         </Col>
@@ -202,6 +204,7 @@ function Class({_class, ...props}) {
       return
     }
 
+    //axios.post('http://localhost:5000/api/v1/class/pupil/contain', {
     axios.post('https://digital-grading-system.herokuapp.com/api/v1/class/pupil/contain', {
       "pupilID": pupilID,
     },{
@@ -210,7 +213,7 @@ function Class({_class, ...props}) {
       }
     }).then( response => {
       if(response.data._id) {
-        //axios.post('http://localhost:5000/api/v1/class/' + response.data._id + '/pupil/assign',
+        //axios.post('http://localhost:5000/api/v1/class/' + response.data._id + '/pupil/assign', {
         axios.post('https://digital-grading-system.herokuapp.com/api/v1/class/' + response.data._id + '/pupil/assign', {
           "pupilID": pupilID,
           "assign": 'false'
@@ -223,9 +226,8 @@ function Class({_class, ...props}) {
       }
     })
     setAssigning(true);
-    //axios.post('http://localhost:5000/api/v1/class/' + _class._id + '/pupil/assign',
-    axios.post('https://digital-grading-system.herokuapp.com/api/v1/class/' + _class._id + '/pupil/assign',
-    {
+    //axios.post('http://localhost:5000/api/v1/class/' + _class._id + '/pupil/assign', {
+    axios.post('https://digital-grading-system.herokuapp.com/api/v1/class/' + _class._id + '/pupil/assign', {
       "pupilID": pupilID,
       "assign": 'true'
     },
@@ -268,8 +270,13 @@ function Class({_class, ...props}) {
     setSubjectError(null);
     setSubjectSuccess(null);
 
-    if(state.teacherID == "") {
+    if(!state.teacherID) {
       setSubjectError("please assign a teacher");
+      return
+    }
+    const s = _class.subjects.find( ({subjectname}) => subjectname === state.subjectname);
+    if(s) {
+      setSubjectError("subject name already exists, try another one");
       return
     }
     setCreatingSubject(true);
@@ -286,7 +293,7 @@ function Class({_class, ...props}) {
         setCreatingSubject(false);
         if(response.data.error == true){
           console.log(response.data.message);
-          setSubjectError("subject name already exists, try another one");
+          setSubjectError(response.data.message);
         } else {
           setShowCreateSubject(false);
           setSubjectSuccess("new subject created");
@@ -335,6 +342,7 @@ function Class({_class, ...props}) {
         if(response.data.error == true){
           console.log(response.data.message);
           setClassError("class name already exists, try another one");
+          setClassname(_class.classname);
         } else {
           setShowUpdateClass(false);
           setClassSuccess("class updated");
@@ -358,6 +366,28 @@ function Class({_class, ...props}) {
   
   // handle button click of deleting
   const handleDeleteClass = async ()=>{
+
+    for( const subject of _class.subjects) {
+      //axios.delete('http://localhost:5000/api/v1/subject/delete/' + subject.subjectID, 
+      axios.delete('https://digital-grading-system.herokuapp.com/api/v1/subject/delete/' + subject.subjectID,
+      {
+        headers: {
+          Authorization: getToken(),
+          classID: _class._id
+        }
+      }).then(response => {
+        console.log(response.message);
+      })
+      //axios.get('http://localhost:5000/api/v1/subject/archive/' + subject.subjectID, 
+      axios.delete('https://digital-grading-system.herokuapp.com/api/v1/subject/archive/' + subject.subjectID,
+      {
+        headers: {
+          Authorization: getToken(),
+        }
+      }).then(response => {
+        console.log(response.message);
+      })
+    }
 
     setDeletingClass(true);
     //axios.delete('http://localhost:5000/api/v1/class/delete/' + _class._id, 
@@ -441,7 +471,7 @@ function Class({_class, ...props}) {
       <Card.Header onClick={() => {
         setShowMore(!showMore);
         //setShowUpdate(false);
-        //setError(null);
+        setClassError(null);
         //setSuccess(null);
       }} onMouseOver={(e) => {e.target.style.cursor = 'pointer'}}
       >
@@ -455,7 +485,7 @@ function Class({_class, ...props}) {
       <hr />
       <Row> 
         {_class.subjects.map((subject, index) =>(
-          <Subject subject={subject} classID={_class._id} key={index} {...props}/>
+          <Subject subject={subject} class={_class} key={index} {...props}/>
         ))}
         <Col md="4" sm="6">
         <Form onSubmit={handleCreateSubject}>
@@ -482,7 +512,7 @@ function Class({_class, ...props}) {
               >
                 <option value=""></option>
                 {teachers.map((teacher, index) => (
-                  <option value={teacher._id}>{teacher.username}</option>
+                  <option value={teacher._id} key={index}>{teacher.username}</option>
                 ))}
 
               </Form.Control>
@@ -599,9 +629,29 @@ function Class({_class, ...props}) {
       </Row>
       
       <hr />
+      <Form onSubmit={handleUpdateClass}>
+      {showUpdateClass &&
+      <Row md="3">
+      <Col>
+      <Card>
+      <Card.Body>
+        <Form.Group>
+        <label>class name</label>
+        <Form.Control
+          defaultValue={classname}
+          placeholder="class name"
+          type="text"
+          name="classname"
+          onChange={e => setClassname(e.target.value)}
+        />
+        </Form.Group>
+      </Card.Body>
+      </Card>
+      </Col>
+      </Row>
+      }
       {classSuccess && <p style={{ color: 'green' }}>{classSuccess}</p>}
       {classError && <p style={{ color: 'red' }}>{classError}</p>}
-      <Form onSubmit={handleUpdateClass}>
       <Button
         className="mx-2 mb-2 btn-fill"
         type="submit"
@@ -638,26 +688,7 @@ function Class({_class, ...props}) {
         {deletingClass ? "Deleting" : "Delete Class"}
       </Button>
       }
-      {showUpdateClass &&
-      <Row md="3">
-      <Col>
-      <Card>
-      <Card.Body>
-        <Form.Group>
-        <label>class name</label>
-        <Form.Control
-          defaultValue={classname}
-          placeholder="class name"
-          type="text"
-          name="classname"
-          onChange={e => setClassname(e.target.value)}
-        />
-        </Form.Group>
-      </Card.Body>
-      </Card>
-      </Col>
-      </Row>
-      }
+
       </Form>
       </>
       }
@@ -763,7 +794,6 @@ function Pupil({pupil, ...props}) {
       </Card.Body>
     </Card>
     </Col>
-
   )
 }
 

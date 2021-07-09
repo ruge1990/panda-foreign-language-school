@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { getToken } from "../Utils/Common.js"
+import { getToken, encrypt } from "../Utils/Common.js"
 import ProfileForm from "./ProfileForm.js";
 
 // react-bootstrap components
@@ -11,19 +11,23 @@ import {
   Container,
   Row,
   Col,
-  FormControl,
 } from "react-bootstrap";
 
 function Profile(props) {
 
-  const [state, setState] = useState({
-    userID: props.location.state.userID,
-    role: props.location.state.role,
-    username: props.location.state.username,
-    password: props.location.state.password,
-    forename: props.location.state.forename,
-    surname: props.location.state.surname
-  });
+  const [state, setState] = useState({});
+  
+  useEffect(() => {
+    setState({
+      userID: props.location.state.userID,
+      role: props.location.state.role,
+      username: props.location.state.username,
+      password: encrypt(props.location.state.password),
+      forename: props.location.state.forename,
+      surname: props.location.state.surname
+    });
+  }, [props.location])
+
 
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
@@ -37,8 +41,14 @@ function Profile(props) {
     setSuccess(null);
     setSubmitting(true);
     //console.log("before submit: " + JSON.stringify(state));
-    axios.put('https://digital-grading-system.herokuapp.com/api/v1/user/update/' + props.location.state.userID, state,
+
+    axios.put('https://digital-grading-system.herokuapp.com/api/v1/user/update/' + props.location.state.userID,
     {
+      username: state.username,
+      password: encrypt(state.password),
+      forename: state.forename,
+      surname: state.surname
+    },{
       headers: {
         Authorization: getToken()
       }
@@ -65,7 +75,6 @@ function Profile(props) {
       setError(JSON.stringify(error));
     });
   }
-
 
   return (
     <>

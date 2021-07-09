@@ -23,8 +23,8 @@ function SubjectForTeacher({subject, ...props}) {
   const [testError, setTestError] = useState(null);
   
   const [state, setState] = useState();
-  const [pupils, setPupils] = useState([]);
-  const [pupilAndGrades, setPupilAndGrades] = useState([]);
+  const [pupils, setPupils] = useState(new Set());
+  const [pupilAndGrades, setPupilAndGrades] = useState(new Set());
 
   useEffect(() => {
     setState({...state,
@@ -35,10 +35,32 @@ function SubjectForTeacher({subject, ...props}) {
 
   useEffect(() => {
     getPupilAndGrade();
-  }, [pupils || props.history])
+  }, [pupils, props.history])
 
   // get all available pupils in the subject
   const getPupil = async () => {
+    if(subject.archived){
+      for (const test of subject.tests) {
+        //await axios.get('http://localhost:5000/api/v1/user/list', {
+        await axios.get('https://digital-grading-system.herokuapp.com/api/v1/test/' + test.testID, {
+          headers: {
+            Authorization: getToken(),
+          }
+        })
+        .then(response => {
+          //console.log(response.data.grades[0].grade);
+          for(const grade of response.data.grades) {
+            const item = JSON.stringify({"pupilID": grade.pupilID});
+            setPupils(pupils => new Set(pupils).add(item));
+          }
+          //setIsLoading(false);
+        }).catch(error => {
+          //setSubmitting(false);
+          //setError(JSON.stringify(error));
+        });
+      }
+      return
+    }
     //await axios.get('http://localhost:5000/api/v1/user/list', {
     await axios.get('https://digital-grading-system.herokuapp.com/api/v1/user/list', {
       headers: {
@@ -48,7 +70,7 @@ function SubjectForTeacher({subject, ...props}) {
     })
     .then(response => {
       //console.log(JSON.stringify(response.data.pupils));
-      setPupils(response.data.pupils);
+      setPupils(pupils => new Set(response.data.pupils));
 
       //setIsLoading(false);
     }).catch(error => {
@@ -60,7 +82,12 @@ function SubjectForTeacher({subject, ...props}) {
   // get all available pupils in the subject
   const getPupilAndGrade = async () => {
     setPupilAndGrades([]);
-    for (const pupil of pupils) {
+    //console.log(subject.subjectname + " " + pupils);
+    var pupil = null;
+    for (const pupil2 of [...pupils]) {
+      if (typeof pupil2 === 'string') pupil = JSON.parse(pupil2);
+      else if (typeof pupil2 === 'object') pupil = pupil2;
+      
       let total_grade = 0;
       let count = 0;
       for (const test of subject.tests) {
@@ -81,11 +108,12 @@ function SubjectForTeacher({subject, ...props}) {
         });
       }
       let average = (count == 0) ? 0 : total_grade/count ;
-      
-      setPupilAndGrades(pupilAndGrades => [...pupilAndGrades, {
+      //console.log(total_grade);
+      const item = {
         pupilID: pupil.pupilID,
         grade: average
-      }]);
+      }
+      setPupilAndGrades(pupilAndGrades => new Set(pupilAndGrades).add(JSON.stringify(item)));
     }
   }
 
@@ -151,7 +179,7 @@ function SubjectForTeacher({subject, ...props}) {
         //setError(null);
         //setSuccess(null);
       } onMouseOver={(e) => {e.target.style.cursor = 'pointer'}}>
-        <Card.Title as="h4">{subject.subjectname}</Card.Title>
+        <Card.Title as="h4">Subject: {subject.subjectname}</Card.Title>
         <Card.Subtitle className="text-muted text-right">
           SubjectID: {subject._id}
         </Card.Subtitle>
@@ -170,13 +198,13 @@ function SubjectForTeacher({subject, ...props}) {
             <th className="border-0">PupilID</th>
             <th className="border-0">First Name</th>
             <th className="border-0">Last Name</th>
-            <th className="border-0">Grade</th>
+            <th className="border-0">Average Grade</th>
           </tr>
         </thead>
         <tbody>
-          {pupilAndGrades.map((grade,index)=>(
+          {[...pupilAndGrades].map((grade,index)=>(
             <Grade
-            grade={grade}
+            grade={JSON.parse(grade)}
             key={index}
             disabled="true"
             {...props}/>
@@ -190,7 +218,7 @@ function SubjectForTeacher({subject, ...props}) {
       <hr />
       <Row sm="1"> 
         {subject.tests.map((test, index) =>(
-          <Test test={test} subjectID={subject._id} pupils={pupils} key={index} {...props}/>
+          <Test test={test} subjectID={subject._id} pupils={pupils} key={index} archived={subject.archived} {...props}/>
         ))}
       </Row>
 
@@ -229,6 +257,7 @@ function SubjectForTeacher({subject, ...props}) {
       
         {testError && <p style={{ color: 'red' }}>{testError}</p>}
         {testSuccess && <p style={{ color: 'green' }}>{testSuccess}</p>}
+        {!subject.archived &&
         <Button
           className="mx-2 mb-1 btn-fill"
           type="submit"
@@ -242,7 +271,7 @@ function SubjectForTeacher({subject, ...props}) {
         >
         {creatingTest ? "Adding..." : showCreateTest ? "Add" : "Add Test"}
         </Button>
-
+        }
         {showCreateTest &&
         <Button
         className="mx-2 mb-1 btn-fill"
@@ -263,7 +292,6 @@ function SubjectForTeacher({subject, ...props}) {
         </Form>
         </Col>
       </Row>
-
       </>
       }
       </Card.Body>
@@ -455,7 +483,7 @@ function Test({test, ...props}) {
         //setError(null);
         //setSuccess(null);
       }} onMouseOver={(e) => {e.target.style.cursor = 'pointer'}}>
-        <Card.Title as="h4">{state.testname}</Card.Title>
+        <Card.Title as="h4">Test: {state.testname}</Card.Title>
         <Card.Subtitle className="text-muted text-right">Date: {state.date}</Card.Subtitle>
       </Card.Header>
       <Card.Body>
@@ -477,6 +505,7 @@ function Test({test, ...props}) {
             <Grade
             grade={grade}
             testID={test.testID}
+            archived={props.archived}
             key={index}
             {...props}/>
           ))}
@@ -484,6 +513,22 @@ function Test({test, ...props}) {
       </Table>
 
       <Form onSubmit={handleCreateGrade}>
+        {showCreate &&
+        <Col md="12">
+          <Card>
+            <Card.Header>
+              <Card.Title as="h4">Create Grade</Card.Title>
+            </Card.Header>
+            <Card.Body>
+              <GradeForm functions={[newGrade, setNewGrade]} pupils={ungradedPupil} isCreate={true} />
+            </Card.Body>
+          </Card>
+        </Col>
+        }
+
+        {gradeError && <p style={{ color: 'red' }}>{gradeError}</p>}
+        {gradeSuccess && <p style={{ color: 'green' }}>{gradeSuccess}</p>}
+        {!props.archived &&
         <Button
           className="mx-3 mb-1 btn-fill"
           type="submit"
@@ -496,7 +541,7 @@ function Test({test, ...props}) {
         >
           {creating ? "Creating..." : showCreate ? "Create" : "New Grade"}
         </Button>
-
+        }
         {showCreate &&
         <Button
           className="mx-3 mb-1 btn-fill"
@@ -511,28 +556,45 @@ function Test({test, ...props}) {
           Cancel
         </Button>
         }
-
-        {gradeError && <p style={{ color: 'red' }}>{gradeError}</p>}
-        {gradeSuccess && <p style={{ color: 'green' }}>{gradeSuccess}</p>}
-
-        {showCreate &&
-        <Col md="12">
-          <Card>
-            <Card.Header>
-              <Card.Title as="h4">Create Grade</Card.Title>
-            </Card.Header>
-            <Card.Body>
-              <GradeForm functions={[newGrade, setNewGrade]} pupils={ungradedPupil} isCreate={true} />
-            </Card.Body>
-          </Card>
-        </Col>
-        }
-        </Form>
-
+      </Form>
       <hr />
-      {testSuccess && <p style={{ color: 'green' }}>{testSuccess}</p>}
-      {testError && <p style={{ color: 'red' }}>{testError}</p>}
+
       <Form onSubmit={handleUpdateTest}>
+      {showUpdateTest &&
+        <Row>
+        <Col>
+        <Card>
+        <Card.Body>
+          <Form.Group>
+          <label>test name</label>
+          <Form.Control
+            defaultValue={state.testname}
+            placeholder="test name"
+            type="text"
+            name="testname"
+            onChange={handleInputChange}
+          />
+          </Form.Group>
+          <Form.Group>
+          <label>date</label>
+          <Form.Control
+            defaultValue={state.date}
+            placeholder="date (yyyy-mm-dd)"
+            type="text"
+            name="date"
+            onChange={handleInputChange}
+          />
+          </Form.Group>
+        </Card.Body>
+        </Card>
+        </Col>
+        </Row>
+        }
+
+        {testSuccess && <p style={{ color: 'green' }}>{testSuccess}</p>}
+        {testError && <p style={{ color: 'red' }}>{testError}</p>}
+        {!props.archived &&
+        <>
         <Button
           className="mx-2 mb-2 btn-fill"
           type="submit"
@@ -570,35 +632,7 @@ function Test({test, ...props}) {
           Delete
         </Button>
         }
-        {showUpdateTest &&
-        <Row>
-        <Col>
-        <Card>
-        <Card.Body>
-          <Form.Group>
-          <label>test name</label>
-          <Form.Control
-            defaultValue={state.testname}
-            placeholder="test name"
-            type="text"
-            name="testname"
-            onChange={handleInputChange}
-          />
-          </Form.Group>
-          <Form.Group>
-          <label>date</label>
-          <Form.Control
-            defaultValue={state.date}
-            placeholder="date (yyyy-mm-dd)"
-            type="text"
-            name="date"
-            onChange={handleInputChange}
-          />
-          </Form.Group>
-        </Card.Body>
-        </Card>
-        </Col>
-        </Row>
+        </>
         }
         </Form>
       </>
@@ -716,7 +750,7 @@ function Grade({grade, ...props}) {
 
   return (
     <>
-    <tr onClick={() => { if(!props.disabled) {
+    <tr onClick={() => { if(!props.disabled && !props.archived) {
       setShowMore(!showMore);
       setShowUpdate(false);
       setError(null);
@@ -731,6 +765,24 @@ function Grade({grade, ...props}) {
       <tr>
         <td colSpan="4">
           <Form onSubmit={handleUpdate}>
+          {showUpdate &&
+          <Row className="justify-content-center">
+          <Col md="12">
+            <Card>
+              <Card.Header>
+                <Card.Title as="h4">Update Grade</Card.Title>
+              </Card.Header>
+              <Card.Body>
+                <GradeForm name={pupilName} functions={[state, setState]}  isCreate={false} />
+              </Card.Body>
+            </Card>
+          </Col>
+          </Row>
+          }
+
+          {success && <p style={{ color: 'green' }}>{success}</p>}
+          {error && <p style={{ color: 'red' }}>{error}</p>}
+
           <Row>
           <Button
             className="mx-3 mb-1 btn-fill"
@@ -771,22 +823,6 @@ function Grade({grade, ...props}) {
           </Button>
           }
           </Row>  
-          {success && <p style={{ color: 'green' }}>{success}</p>}
-          {error && <p style={{ color: 'red' }}>{error}</p>}
-          {showUpdate &&
-          <Row className="justify-content-center">
-          <Col md="12">
-            <Card>
-              <Card.Header>
-                <Card.Title as="h4">Update Grade</Card.Title>
-              </Card.Header>
-              <Card.Body>
-                <GradeForm name={pupilName} functions={[state, setState]}  isCreate={false} />
-              </Card.Body>
-            </Card>
-          </Col>
-          </Row>
-          }
         </Form>
         </td>
       </tr>
@@ -830,7 +866,7 @@ function GradeForm(props) {
         surname: response.data.surname
       }]);
 
-      console.log(response.data);
+      //console.log(response.data);
       //setIsLoading(false);
     }).catch(error => {
       //setSubmitting(false);
@@ -861,8 +897,8 @@ function GradeForm(props) {
         onChange={handleInputChange}
       >
         <option value=""></option>
-        {pupils.map((pupil) => (
-          <option value={pupil.pupilID}>{pupil.pupilname}</option>
+        {pupils.map((pupil, index) => (
+          <option value={pupil.pupilID} key={index}>{pupil.pupilname}</option>
         ))}
 
       </Form.Control>

@@ -15,10 +15,11 @@ import {
 function SubjectForAdmin({subject, ...props}) {
   const [teacherName, setTeacherName] = useState(null);
   const [state, setState] = useState({
-    classID: props.classID
+    classID: props.class._id
   });
   const [teachers, setTeachers] = useState([]);
-
+  const [testNumber, setTestNumber] = useState(0);
+  const [archived, setArchived] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [showUpdate, setShowUpdate] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -32,7 +33,8 @@ function SubjectForAdmin({subject, ...props}) {
       teacherID: subject.teacherID
     });
     getTeacherName();
-  }, [subject.teacherID])
+    getSubjectInfo();
+  }, [subject])
 
 
   const getTeacherName = async () => {
@@ -46,7 +48,33 @@ function SubjectForAdmin({subject, ...props}) {
     .then(response => {
       //console.log(JSON.stringify(response.data));
       setTeacherName(response.data.forename + " " + response.data.surname);
-      console.log('reset teacher name');
+      //console.log('reset teacher name');
+      //setIsLoading(false);
+    }).catch(error => {
+      //setSubmitting(false);
+      //setError(JSON.stringify(error));
+    });
+  }
+
+  const getSubjectInfo = async () => {
+    if(subject.tests) {
+      setTestNumber(subject.tests.length);
+      return
+    }
+
+    //setIsLoading(true);
+    //await axios.get('http://localhost:5000/api/v1/subject/' + subject.subjectID, 
+    await axios.get('https://digital-grading-system.herokuapp.com/api/v1/subject/' + subject.subjectID, 
+    {
+      headers: {
+        Authorization: getToken()
+      }
+    })
+    .then(response => {
+      //console.log(JSON.stringify(response.data.tests.length));
+      setTestNumber(response.data.tests.length);
+      setArchived(response.data.archived);
+      //console.log('reset teacher name');
       //setIsLoading(false);
     }).catch(error => {
       //setSubmitting(false);
@@ -63,6 +91,12 @@ function SubjectForAdmin({subject, ...props}) {
 
     if(state.teacherID == "") {
       setError("please assign a teacher");
+      return
+    }
+
+    const s = props.class.subjects.find( ({subjectname}) => subjectname === state.subjectname);
+    if(state.subjectname != subject.subjectname && s) {
+      setError("subject name already exists, try another one");
       return
     }
     console.log(state);
@@ -87,7 +121,7 @@ function SubjectForAdmin({subject, ...props}) {
           setSuccess("subject updated");
           //window.location.reload();
 
-          console.log(JSON.stringify(props));
+          //console.log(JSON.stringify(props));
           props.history.push({
             pathname: props.history.location.pathname,
             state: props.location.state
@@ -104,13 +138,31 @@ function SubjectForAdmin({subject, ...props}) {
   }
   
   const handleDelete = async ()=>{
-
     //axios.delete('http://localhost:5000/api/v1/subject/delete/' + subject.subjectID, 
     axios.delete('https://digital-grading-system.herokuapp.com/api/v1/subject/delete/' + subject.subjectID,
     {
       headers: {
         Authorization: getToken(),
-        classID: props.classID,
+        classID: props.class._id
+      }
+    }).then(response => {
+        //alert("Person deleted sucessfully");
+        props.history.push({
+          pathname: '/class',
+          state: props.location.state
+        })
+    }).catch(error => {
+        console.log(error.message);
+        setError(JSON.stringify(error));
+    });
+  }
+
+  const handleArchive = async ()=>{
+    //axios.delete('http://localhost:5000/api/v1/subject/delete/' + subject.subjectID, 
+    axios.get('https://digital-grading-system.herokuapp.com/api/v1/subject/archive/' + subject.subjectID,
+    {
+      headers: {
+        Authorization: getToken(),
       }
     }).then(response => {
         //alert("Person deleted sucessfully");
@@ -154,7 +206,7 @@ function SubjectForAdmin({subject, ...props}) {
     <Form onSubmit={handleUpdate}>
     <Card>
       <Card.Header onClick={() => {
-        if(!showUpdate && !props.disabled) {setShowMore(!showMore);}
+        if(!showUpdate && !props.disabled && !subject.archived) {setShowMore(!showMore);}
         //setError(null);
         //setSuccess(null);
       }} onMouseOver={(e) => {e.target.style.cursor = 'pointer'}}>
@@ -171,7 +223,7 @@ function SubjectForAdmin({subject, ...props}) {
           ></Form.Control>
           </Form.Group>
           :
-          state.subjectname}
+          state.subjectname }
         </Card.Title>
       </Card.Header>
       <Card.Body>
@@ -185,15 +237,21 @@ function SubjectForAdmin({subject, ...props}) {
           onChange={handleInputChange}
         >
         <option value=""></option>
-        {teachers.map((teacher) => (
-          <option value={teacher._id}>{teacher.username}</option>
+        {teachers.map((teacher, index) => (
+          <option value={teacher._id} key={index}>{teacher.username}</option>
         ))}
         </Form.Control>
         </Form.Group>
         :
-        teacherName
+        <p>{teacherName}</p>
       }
       {showMore &&
+        <p>{testNumber} tests</p>
+      }
+      {success && <p style={{ color: 'green' }}>{success}</p>}
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {(archived && showMore) && <h4>Archived</h4>}
+      {(!archived && showMore) &&
         <Row>
         <Button
           className="mx-3 my-2 btn-fill"
@@ -220,12 +278,16 @@ function SubjectForAdmin({subject, ...props}) {
             setShowMore(false);
             setError(null);
             setSuccess(null);
+            setState({
+              subjectname: subject.subjectname,
+              teacherID: subject.teacherID
+            })
           }}
         >
           Cancel
         </Button>
         }
-        {(!showUpdate && !updating) &&
+        {(!showUpdate && !updating && testNumber == 0) &&
         <Button 
           className="mx-3 my-2 btn-fill"
           variant="danger"
@@ -234,10 +296,17 @@ function SubjectForAdmin({subject, ...props}) {
           Delete
         </Button>
         }
+        {(!showUpdate && !updating && testNumber != 0) &&
+        <Button 
+          className="mx-3 my-2 btn-fill"
+          variant="warning"
+          onClick={handleArchive}
+        >
+          Archive
+        </Button>
+        }
         </Row>  
       }
-      {success && <p style={{ color: 'green' }}>{success}</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
       </Card.Body>
     </Card>
     </Form>

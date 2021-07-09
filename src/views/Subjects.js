@@ -17,7 +17,6 @@ import {
 } from "react-bootstrap";
 
 function Subjects(props) {
-
   const [allSubject, setAllSubject] = useState([]);
 
   const getAllSubject = async ()=>{
@@ -42,7 +41,7 @@ function Subjects(props) {
     else if(props.history.location.state.role == "admin") {
       await axios.get('https://digital-grading-system.herokuapp.com/api/v1/subject/list', {
         headers: {
-          Authorization: getToken(),
+          Authorization: getToken()
         }
       })
       .then(response => {
@@ -54,8 +53,8 @@ function Subjects(props) {
         //setError(JSON.stringify(error));
       });
     } else {
-      await axios.post('http://localhost:5000/api/v1/class/pupil/contain', {
-      //await axios.post('https://digital-grading-system.herokuapp.com/api/v1/class/pupil/contain', {
+      //await axios.post('http://localhost:5000/api/v1/class/pupil/contain', {
+      await axios.post('https://digital-grading-system.herokuapp.com/api/v1/class/pupil/contain', {
         pupilID: props.history.location.state.userID
       },{
         headers: {
@@ -109,9 +108,11 @@ function LayoutForAdmin ({allSubject, ...props}) {
       <hr />
       <Card.Body>
       <Row>
-        {allSubject.map((subject) =>(
+        {allSubject.filter(subject=>!subject.archived).map((subject,index) =>(
           <SubjectForAdmin
           subject={subject}
+          class=""
+          key={index}
           {...props}/>
         ))
         }
@@ -126,7 +127,14 @@ function LayoutForAdmin ({allSubject, ...props}) {
       <hr />
       <Card.Body>
       <Row>
-
+      {allSubject.filter(subject=>subject.archived).map((subject,index) =>(
+          <SubjectForAdmin
+          subject={subject}
+          class=""
+          key={index}
+          {...props}/>
+        ))
+        }
       </Row>
       </Card.Body>
     </Card>
@@ -145,9 +153,10 @@ function LayoutForTeacher ({allSubject, ...props}) {
       <Card.Body>
       <Row sm="1">
         <Col>
-        {allSubject.map((subject) =>(
+        {allSubject.filter(subject=>!subject.archived).map((subject,index) =>(
           <SubjectForTeacher
           subject={subject}
+          key={index}
           {...props}/>
         ))
         }
@@ -163,7 +172,15 @@ function LayoutForTeacher ({allSubject, ...props}) {
       <hr />
       <Card.Body>
       <Row>
-
+        <Col>
+        {allSubject.filter(subject=>subject.archived).map((subject,index) =>(
+          <SubjectForTeacher
+          subject={subject}
+          key={index}
+          {...props}/>
+        ))
+        }
+        </Col>
       </Row>
       </Card.Body>
     </Card>

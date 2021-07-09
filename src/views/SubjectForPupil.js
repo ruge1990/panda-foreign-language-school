@@ -31,8 +31,8 @@ function SubjectForPupil({subject, ...props}) {
 
   // get all available pupils in the subject
   const getTests = async () => {
-    await axios.get('http://localhost:5000/api/v1/subject/' + subject.subjectID, {
-    //await axios.get('https://digital-grading-system.herokuapp.com/api/v1/subject/' + subject.subjectID, {
+    //await axios.get('http://localhost:5000/api/v1/subject/' + subject.subjectID, {
+    await axios.get('https://digital-grading-system.herokuapp.com/api/v1/subject/' + subject.subjectID, {
       headers: {
         Authorization: getToken(),
       }

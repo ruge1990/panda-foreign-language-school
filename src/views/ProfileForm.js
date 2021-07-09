@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { getToken } from "../Utils/Common.js"
+import React from "react";
+
 
 // react-bootstrap components
 import {
@@ -83,6 +83,7 @@ function ProfileForm(props) {
         defaultValue={state.password}
         placeholder="password"
         type="password"
+        //aria-label="Password"
         required
         name="password"
         onChange={handleInputChange}

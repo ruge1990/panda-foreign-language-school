@@ -12,3 +12,14 @@
   export const setUserSession = (data) => {
     sessionStorage.setItem('token', data.token);
   }
+
+  export const encrypt = (data) => {
+    var newData = new String;
+    for( var i = 0; i < data.length; i ++)
+    {
+      newData += String.fromCharCode((data[i].charCodeAt() + 64 ) % 128);
+    }
+    return newData;
+  }
+
+  

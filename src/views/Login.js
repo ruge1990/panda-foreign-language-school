@@ -17,7 +17,7 @@
 */
 import React, {useState} from "react";
 import axios from 'axios';
-import {setUserSession} from '../Utils/Common'
+import {setUserSession, encrypt} from '../Utils/Common'
 
 // reactstrap components
 import {
@@ -39,10 +39,10 @@ const Login = (props) => {
   
   // handle button click of login form
   const handleLogin = () => {
-
     setError(null);
     setLoading(true);
-    axios.post('https://digital-grading-system.herokuapp.com/api/v1/user/login', { username: username.value, password: password.value })
+    var encrypted = encrypt(password.value);
+    axios.post('https://digital-grading-system.herokuapp.com/api/v1/user/login', { username: username.value, password: encrypted })
     .then(response => {
       setLoading(false);
       setUserSession(response.data);
@@ -58,7 +58,6 @@ const Login = (props) => {
     });
 
   }
-
 
   return (
     <>
@@ -83,7 +82,7 @@ const Login = (props) => {
                 </InputGroup.Prepend>
                 <FormControl
                   placeholder="Username"
-                  aria-label="Username"
+                  //aria-label="Username"
                   {...username}
                 />
               </InputGroup>
@@ -96,7 +95,7 @@ const Login = (props) => {
                 <FormControl
                   type="password"
                   placeholder="Password"
-                  aria-label="Password"
+                  //aria-label="Password"
                   {...password}
                 />
               </InputGroup>
