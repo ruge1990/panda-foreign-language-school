@@ -37,7 +37,7 @@ function App() {
         if (!token) {
             return;
         }
-        axios.get(`https://digital-grading-system.herokuapp.com/api/v1/user/verify?token=${token}`).then(response => {
+        axios.get(`https://digital-grading-system.cyclic.com/api/v1/user/verify?token=${token}`).then(response => {
             setTimeout(() => {
                 setUserSession(response.data);
                 setAuthLoading(false);
